@@ -67,6 +67,10 @@ jobs:
 
   build-wheels:
     needs: build-ffmpeg
+    # Run even if one build-ffmpeg matrix leg failed: each wheel leg only
+    # needs its own platform's FFmpeg artifact (missing artifact -> that leg
+    # fails on download, the other proceeds).
+    if: ${{ !cancelled() }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

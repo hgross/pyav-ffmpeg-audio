@@ -233,7 +233,9 @@ def main():
     else:
         run(["strip", "-s"] + libraries)
 
-    # build output tarball
+    # build output tarball; the audio-only build installs no programs, so
+    # bin/ may not exist on non-Windows platforms
+    os.makedirs(os.path.join(dest_dir, "bin"), exist_ok=True)
     os.makedirs(output_dir, exist_ok=True)
     run(["tar", "czvf", output_tarball, "-C", dest_dir, "bin", "include", "lib"])
 
