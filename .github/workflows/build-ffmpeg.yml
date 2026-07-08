@@ -52,6 +52,9 @@ jobs:
           path-type: inherit
       - name: Build FFmpeg (macOS)
         if: runner.os == 'macOS'
+        env:
+          # cibuildpkg expects cibuildwheel's arch selection; we build natively.
+          ARCHFLAGS: -arch arm64
         run: python scripts/build-ffmpeg.py /tmp/vendor
       - name: Build FFmpeg (Windows)
         if: runner.os == 'Windows'
