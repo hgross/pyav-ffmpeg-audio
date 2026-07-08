@@ -123,9 +123,6 @@ jobs:
           path.write_text(f'__version__ = "{version}"\n')
           print("wheel version:", version)
           EOF
-      - name: Add smoke test to PyAV tree
-        shell: bash
-        run: cp scripts/wheel_smoke_test.py pyav/
       - name: Build wheels
         shell: bash
         env:
@@ -136,7 +133,10 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: INCLUDE=C:\\cibw\\vendor\\include LIB=C:\\cibw\\vendor\\lib
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: delvewheel repair --add-path C:\cibw\vendor\bin -w {dest_dir} {wheel}
           CIBW_TEST_REQUIRES: numpy
-          CIBW_TEST_COMMAND: python {package}/wheel_smoke_test.py
+          # The test script must live OUTSIDE the PyAV checkout: the script's
+          # directory lands on sys.path, and the source tree's av/ package
+          # would shadow the installed wheel.
+          CIBW_TEST_COMMAND: python {project}/scripts/wheel_smoke_test.py
         run: |
           pip install cibuildwheel delvewheel
           cibuildwheel pyav --output-dir dist
