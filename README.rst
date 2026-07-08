@@ -53,11 +53,12 @@ Artifacts
 
 GitHub releases on this repository contain:
 
-- ``ffmpeg-windows-x86_64.tar.gz`` / ``ffmpeg-macos-arm64.tar.gz`` — the
-  FFmpeg dev trees (``bin``, ``include``, ``lib`` with import libraries and
-  pkg-config files),
-- ``av-16.1.0+*.whl`` — PyAV wheels (CPython 3.12/3.13) built against those
-  libraries,
+- ``ffmpeg-windows-x86_64.tar.gz`` / ``ffmpeg-macos-arm64.tar.gz`` /
+  ``ffmpeg-manylinux-x86_64.tar.gz`` / ``ffmpeg-manylinux-aarch64.tar.gz`` —
+  the FFmpeg dev trees (``bin``, ``include``, ``lib`` with import libraries
+  and pkg-config files),
+- ``av-16.1.0+*.whl`` — PyAV wheels (CPython 3.12/3.13; Windows x64, macOS
+  arm64, Linux manylinux x86_64/aarch64) built against those libraries,
 - the **exact source tarballs** (``ffmpeg-8.0.1.tar.xz``, ``opus-1.6.tar.gz``)
   used for the binaries, for LGPL source-availability purposes. The complete
   build configuration is this repository itself (see
@@ -68,7 +69,12 @@ Building
 
 Builds run via the ``build`` GitHub Actions workflow (``workflow_dispatch``
 only — repository write access is required to trigger it) on
-``windows-latest`` (MSYS2/MINGW64) and ``macos-14`` (arm64). The wheel jobs
+``windows-latest`` (MSYS2/MINGW64), ``macos-14`` (arm64), and
+``ubuntu-24.04``/``ubuntu-24.04-arm`` (where FFmpeg is compiled inside the
+manylinux container via cibuildwheel so the wheels stay glibc-portable).
+Deliberately not built: musllinux (PySide6/Qt ship no musl wheels, so the
+consuming app cannot exist there) and macOS x86_64 (not a target; add a
+matrix leg like upstream's ``macos-15-intel`` if that changes). The wheel jobs
 check out ``PyAV-Org/PyAV`` at ``v16.1.0`` unmodified except for the version
 stamp, compile it against the freshly built FFmpeg (MSVC + ``delvewheel`` on
 Windows, ``delocate`` on macOS) and run the smoke test.

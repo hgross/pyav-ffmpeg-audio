@@ -16,6 +16,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Deliberately omitted upstream variants: musllinux (PySide6/Qt ship
+        # no musl wheels, so ApexRelay Pilot cannot exist there) and macOS
+        # x86_64 (Pilot's macOS target is arm64-only; add an entry like
+        # upstream's macos-15-intel leg if that ever changes).
         include:
           - os: macos-14
             shell: bash
@@ -23,6 +27,12 @@ jobs:
             shell: 'msys2 {0}'
             msys_prefix: mingw-w64-x86_64
             msys_system: MINGW64
+          - os: ubuntu-24.04
+            shell: bash
+            cibw_arch: x86_64
+          - os: ubuntu-24.04-arm
+            shell: bash
+            cibw_arch: aarch64
     defaults:
       run:
         shell: ${{ matrix.shell }}
@@ -59,6 +69,22 @@ jobs:
       - name: Build FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: python scripts/build-ffmpeg.py C:/cibw/vendor
+      - name: Build FFmpeg (Linux)
+        if: runner.os == 'Linux'
+        # Linux builds run INSIDE the manylinux container via cibuildwheel
+        # (upstream's pattern): compiling on the runner's Ubuntu would link
+        # against its new glibc and the wheels would not be portable. The
+        # dummy package is just the vehicle; build-ffmpeg.py drops the
+        # tarball into /output, which cibuildwheel copies to --output-dir.
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_BEFORE_BUILD: python scripts/build-ffmpeg.py /tmp/vendor
+          CIBW_BUILD: "cp311-*"
+          CIBW_SKIP: "*-musllinux*"
+        run: |
+          pip install cibuildwheel
+          cibuildwheel --output-dir output
+          rm -f output/*.whl
       - name: Upload FFmpeg
         uses: actions/upload-artifact@v6
         with:
@@ -84,6 +110,12 @@ jobs:
             arch: AMD64
             vendor_unix: /c/cibw/vendor
             tarball: ffmpeg-windows-x86_64.tar.gz
+          - os: ubuntu-24.04
+            arch: x86_64
+            tarball: ffmpeg-manylinux-x86_64.tar.gz
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            tarball: ffmpeg-manylinux-aarch64.tar.gz
     steps:
       - uses: actions/checkout@v6
       - name: Check out PyAV v16.1.0
@@ -104,6 +136,10 @@ jobs:
           name: ffmpeg-${{ matrix.os }}
           path: ffmpeg-dist
       - name: Unpack FFmpeg
+        # On Linux the wheel build runs inside the manylinux container, so
+        # the vendor tree is extracted there by CIBW_BEFORE_BUILD_LINUX
+        # instead (the host filesystem is only mounted at /project).
+        if: runner.os != 'Linux'
         shell: bash
         run: |
           mkdir -p "${{ matrix.vendor_unix }}"
@@ -128,7 +164,9 @@ jobs:
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_BUILD: "cp312-* cp313-*"
-          CIBW_SKIP: "pp*"
+          CIBW_SKIP: "pp* *-musllinux*"
+          CIBW_BEFORE_BUILD_LINUX: mkdir -p /tmp/vendor && tar xzf /project/ffmpeg-dist/${{ matrix.tarball }} -C /tmp/vendor
+          CIBW_ENVIRONMENT_LINUX: LD_LIBRARY_PATH=/tmp/vendor/lib PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
           CIBW_ENVIRONMENT_MACOS: PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig LDFLAGS=-headerpad_max_install_names
           CIBW_ENVIRONMENT_WINDOWS: INCLUDE=C:\\cibw\\vendor\\include LIB=C:\\cibw\\vendor\\lib
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: delvewheel repair --add-path C:\cibw\vendor\bin -w {dest_dir} {wheel}
