@@ -8,6 +8,10 @@ the matching FFmpeg/libopus source archives).
 The wheels live on a git branch rather than as release assets because GitHub
 release asset names mangle the `+` of PEP 440 local versions.
 
+**This branch is append-only and must never be force-pushed or rewritten** —
+consumers pin wheels by commit SHA, and rewriting history would eventually let
+GitHub garbage-collect the pinned commits and 404 every consumer.
+
 Consume them via SHA-pinned raw URLs so the artifact can never change under
 you, e.g. in `uv`:
 
