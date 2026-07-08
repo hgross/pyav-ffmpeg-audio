@@ -93,6 +93,10 @@ jobs:
           CIBW_BEFORE_BUILD: python scripts/build-ffmpeg.py /tmp/vendor
           CIBW_BUILD: "cp311-*"
           CIBW_SKIP: "*-musllinux*"
+          # The dummy extension links FFmpeg as a sanity check; auditwheel
+          # needs the vendor libs on LD_LIBRARY_PATH and the libmvec
+          # excludes to repair it (mirrors upstream).
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: LD_LIBRARY_PATH=/tmp/vendor/lib:$LD_LIBRARY_PATH auditwheel repair --exclude libmvec.so.1 --exclude libmvec-2.so --exclude libmvec.so --exclude libmvec -w {dest_dir} {wheel}
         run: |
           pip install cibuildwheel
           cibuildwheel --output-dir output
@@ -188,7 +192,7 @@ jobs:
           CIBW_BUILD: "cp312-* cp313-*"
           CIBW_SKIP: "pp* *-musllinux*"
           CIBW_BEFORE_BUILD_LINUX: mkdir -p /tmp/vendor && tar xzf /project/ffmpeg-dist/${{ matrix.tarball }} -C /tmp/vendor
-          CIBW_ENVIRONMENT_LINUX: LD_LIBRARY_PATH=/tmp/vendor/lib PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
+          CIBW_ENVIRONMENT_LINUX: LD_LIBRARY_PATH=/tmp/vendor/lib:$LD_LIBRARY_PATH PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig
           CIBW_ENVIRONMENT_MACOS: PKG_CONFIG_PATH=/tmp/vendor/lib/pkgconfig LDFLAGS=-headerpad_max_install_names
           CIBW_ENVIRONMENT_WINDOWS: INCLUDE=C:\\cibw\\vendor\\include LIB=C:\\cibw\\vendor\\lib
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: delvewheel repair --add-path C:\cibw\vendor\bin -w {dest_dir} {wheel}
