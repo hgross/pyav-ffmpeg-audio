@@ -15,7 +15,10 @@ from av._core import library_meta
 # The licence-relevant fingerprint of the audio-only build.
 FORBIDDEN_CONFIGURE = ("--enable-gpl", "--enable-nonfree", "--enable-version3", "libx264", "libx265")
 REQUIRED_CONFIGURE = ("--disable-everything", "--disable-autodetect", "--enable-libopus")
-REQUIRED_CODECS = ("libopus", "pcm_alaw", "pcm_mulaw", "adpcm_g722")
+# Runtime codec names as aiortc requests them (the configure components are
+# libopus/pcm_alaw/pcm_mulaw/adpcm_g722; the G.722 implementation registers
+# itself as plain "g722").
+REQUIRED_CODECS = ("libopus", "pcm_alaw", "pcm_mulaw", "g722")
 FORBIDDEN_CODECS = (
     "libx264", "libx265", "libopenh264", "h264", "hevc",
     "libvpx", "libaom-av1", "libsvtav1", "mpeg4", "vp8", "vp9", "av1",

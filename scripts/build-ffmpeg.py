@@ -161,8 +161,10 @@ def main():
         # hardware acceleration path).
         "--disable-everything",
         "--disable-autodetect",
-        # pthreads is autodetected, so re-enable threading explicitly.
-        "--enable-pthreads",
+        # Threading is autodetected, so re-enable it explicitly: FFmpeg's
+        # native w32threads on Windows (the MINGW64 pthreads probe fails with
+        # autodetect off), pthreads elsewhere.
+        "--enable-w32threads" if plat == "Windows" else "--enable-pthreads",
         # The aiortc/PyAV voice stack: Opus via libopus (aiortc asks for the
         # "libopus" codec by name), plus aiortc's G.711/G.722 fallbacks.
         "--enable-libopus",
