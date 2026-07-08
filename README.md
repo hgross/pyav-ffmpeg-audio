@@ -22,6 +22,6 @@ av = [
 ]
 ```
 
-Built by the `build` workflow (run 28967206168); every wheel passed
+Built by the `build` workflow (win_amd64/macosx_14_0_arm64: run 28967206168; macosx_11_0_x86_64/manylinux_2_28: run 28974964723); every wheel passed
 `scripts/wheel_smoke_test.py` (no GPL configure flags, no video codecs,
 working libopus/resampler audio path). Integrity: see `SHA256SUMS`.
