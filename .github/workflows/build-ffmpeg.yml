@@ -16,13 +16,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Deliberately omitted upstream variants: musllinux (PySide6/Qt ship
-        # no musl wheels, so ApexRelay Pilot cannot exist there) and macOS
-        # x86_64 (Pilot's macOS target is arm64-only; add an entry like
-        # upstream's macos-15-intel leg if that ever changes).
+        # Deliberately omitted upstream variant: musllinux (PySide6/Qt ship
+        # no musl wheels, so ApexRelay Pilot cannot exist there).
         include:
           - os: macos-14
             shell: bash
+            mac_arch: arm64
+          - os: macos-15-intel
+            shell: bash
+            mac_arch: x86_64
           - os: windows-latest
             shell: 'msys2 {0}'
             msys_prefix: mingw-w64-x86_64
@@ -43,17 +45,27 @@ jobs:
           python-version: "3.13"
       - name: Set deployment target
         if: runner.os == 'macOS'
-        run: echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+        # Mirrors upstream: 11.0 for Intel, 14.0 for Apple Silicon.
+        run: |
+          if [ "${{ matrix.mac_arch }}" = "x86_64" ]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
+          else
+            echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+          fi
       - name: Install packages for macOS
         if: runner.os == 'macOS'
         # Unlink Homebrew libraries so FFmpeg's configure cannot pick them up
         # (belt-and-braces next to --disable-autodetect). Tolerate formulae
-        # missing from the runner image.
+        # missing from the runner image. Intel needs yasm for the x86 asm,
+        # matching upstream.
         run: |
           brew update
           for formula in gettext libidn2 libpng libtiff libunistring libx11 libxau libxcb libxdmcp little-cms2 unbound; do
             brew unlink "$formula" 2>/dev/null || true
           done
+          if [ "${{ matrix.mac_arch }}" = "x86_64" ]; then
+            brew install yasm
+          fi
       - uses: msys2/setup-msys2@v2
         if: matrix.os == 'windows-latest'
         with:
@@ -64,7 +76,7 @@ jobs:
         if: runner.os == 'macOS'
         env:
           # cibuildpkg expects cibuildwheel's arch selection; we build natively.
-          ARCHFLAGS: -arch arm64
+          ARCHFLAGS: -arch ${{ matrix.mac_arch }}
         run: python scripts/build-ffmpeg.py /tmp/vendor
       - name: Build FFmpeg (Windows)
         if: runner.os == 'Windows'
@@ -106,6 +118,10 @@ jobs:
             arch: arm64
             vendor_unix: /tmp/vendor
             tarball: ffmpeg-macos-arm64.tar.gz
+          - os: macos-15-intel
+            arch: x86_64
+            vendor_unix: /tmp/vendor
+            tarball: ffmpeg-macos-x86_64.tar.gz
           - os: windows-latest
             arch: AMD64
             vendor_unix: /c/cibw/vendor
@@ -129,7 +145,13 @@ jobs:
           python-version: "3.13"
       - name: Set deployment target
         if: runner.os == 'macOS'
-        run: echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+        # Must match the FFmpeg build's target: 11.0 Intel, 14.0 Apple Silicon.
+        run: |
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
+          else
+            echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+          fi
       - name: Download FFmpeg
         uses: actions/download-artifact@v6
         with:
